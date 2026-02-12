@@ -9,8 +9,10 @@ import java.util.Stack;
 
 public class GameModel {
     private Stack<String> deck = new Stack<>();
-    private int teamAScore = 0;
-    private int teamBScore = 0;
+
+    // Changed from just int to Lists so we can show them
+    private List<String> teamAWords = new ArrayList<>();
+    private List<String> teamBWords = new ArrayList<>();
 
     public GameModel() {
         loadWords();
@@ -23,7 +25,7 @@ public class GameModel {
                 new BufferedReader(new InputStreamReader(stream)).lines().forEach(deck::push);
                 Collections.shuffle(deck);
             } else {
-                deck.push("NEBULA"); // Fallback
+                deck.push("NEBULA");
                 deck.push("CHRONOS");
                 deck.push("ALGORITHM");
             }
@@ -37,13 +39,26 @@ public class GameModel {
         return deck.pop();
     }
 
-    public void addScore(boolean isTeamA) {
-        if (isTeamA) teamAScore++;
-        else teamBScore++;
+    public void recordWin(boolean isTeamA, String word) {
+        if (word == null || word.equals("GAME OVER")) return;
+
+        if (isTeamA) {
+            teamAWords.add(word);
+        } else {
+            teamBWords.add(word);
+        }
+    }
+
+    public int getScore(boolean isTeamA) {
+        return isTeamA ? teamAWords.size() : teamBWords.size();
+    }
+
+    public List<String> getWords(boolean isTeamA) {
+        return isTeamA ? teamAWords : teamBWords;
     }
 
     public String getScoreString() {
-        return "Team A: " + teamAScore + " | Team B: " + teamBScore;
+        return "Team A: " + getScore(true) + " | Team B: " + getScore(false);
     }
 
     public String rollDice() {
@@ -52,13 +67,6 @@ public class GameModel {
             return "⚠️ ROLL 6: " + getPowerUp();
         }
         return "STANDARD ROUND (Roll: " + roll + ")";
-    }
-
-    public void resetGame() {
-        deck.clear();
-        teamAScore = 0;
-        teamBScore = 0;
-        loadWords(); // Re-reads the file or fallback
     }
 
     private String getPowerUp() {
@@ -72,5 +80,12 @@ public class GameModel {
             case 6 -> "LOOKAHEAD";
             default -> "POWER UP";
         };
+    }
+
+    public void resetGame() {
+        deck.clear();
+        teamAWords.clear();
+        teamBWords.clear();
+        loadWords();
     }
 }
