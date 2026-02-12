@@ -24,7 +24,13 @@ public class LockInApp extends Application {
         VBox root = new VBox(25);
         root.setAlignment(Pos.CENTER);
         // Force a color so we know if the UI is rendering
-        root.setStyle("-fx-background-color: #0f0f1b;");
+        root.setBackground(new javafx.scene.layout.Background(
+                new javafx.scene.layout.BackgroundFill(
+                        javafx.scene.paint.Color.rgb(15, 15, 27),
+                        null,
+                        null
+                )
+        ));
 
         scoreLabel.setText(gameModel.getScoreString());
         scoreLabel.setStyle("-fx-text-fill: white; -fx-font-size: 24px; -fx-font-family: 'Arial';");

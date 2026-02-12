@@ -1,7 +1,6 @@
 package com.lockin;
 
 import javafx.animation.RotateTransition;
-import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -17,9 +16,9 @@ public class CardView extends StackPane {
     private ImageView frontView = new ImageView();
     private Label wordLabel = new Label();
 
-    // Fallback shapes in case images fail
-    private Rectangle backPlaceholder = new Rectangle(350, 500, Color.DARKBLUE);
-    private Rectangle frontPlaceholder = new Rectangle(350, 500, Color.WHITESMOKE);
+    // DEBUG MODE: Bright colors to see if images are missing
+    private Rectangle backPlaceholder = new Rectangle(350, 500, Color.RED);  // RED = Back Image Missing
+    private Rectangle frontPlaceholder = new Rectangle(350, 500, Color.GREEN); // GREEN = Front Image Missing
 
     private Image backImg;
     private Image frontImg;
@@ -28,58 +27,53 @@ public class CardView extends StackPane {
         this.setPrefSize(350, 500);
         loadAssets();
 
-        // Setup Word Label
         wordLabel.setStyle("-fx-font-size: 40px; -fx-font-weight: bold; -fx-text-fill: #1a1a2e;");
         wordLabel.setVisible(false);
 
-        // Add everything to the stack (Layers)
-        // Layer 1: Placeholders (Only visible if images fail)
-        // Layer 2: Images
-        // Layer 3: Text
+        // Add layers
         this.getChildren().addAll(backPlaceholder, frontPlaceholder, backView, frontView, wordLabel);
 
-        showBack(); // Start face down
+        showBack();
     }
 
     private void loadAssets() {
+        System.out.println("--- LOADING ASSETS ---");
         try {
-            // NOTE: Make sure these match your file names exactly (case sensitive!)
-            var backStream = getClass().getResourceAsStream("/images/card_back.jpg");
-            var frontStream = getClass().getResourceAsStream("/images/card_front.png");
+            // Debugging the paths
+            var backUrl = getClass().getResource("/images/card_back.jpg");
+            var frontUrl = getClass().getResource("/images/card_front.png");
 
-            if (backStream != null) {
-                backImg = new Image(backStream);
+            System.out.println("Back URL: " + (backUrl != null ? "FOUND" : "MISSING"));
+            System.out.println("Front URL: " + (frontUrl != null ? "FOUND" : "MISSING"));
+
+            if (backUrl != null) {
+                backImg = new Image(backUrl.toExternalForm());
                 backView.setImage(backImg);
                 backView.setFitWidth(350);
                 backView.setPreserveRatio(true);
-                backPlaceholder.setVisible(false); // Hide placeholder if image loads
             }
-
-            if (frontStream != null) {
-                frontImg = new Image(frontStream);
+            if (frontUrl != null) {
+                frontImg = new Image(frontUrl.toExternalForm());
                 frontView.setImage(frontImg);
                 frontView.setFitWidth(350);
                 frontView.setPreserveRatio(true);
-                frontPlaceholder.setVisible(false);
             }
         } catch (Exception e) {
-            System.err.println("Could not load images: " + e.getMessage());
+            System.err.println("CRASH LOADING IMAGES: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     public void flipToWord(String word, Runnable onFlipFinished) {
-        // 1. Rotate to 90 degrees
         RotateTransition rot = new RotateTransition(Duration.millis(300), this);
         rot.setAxis(Rotate.Y_AXIS);
         rot.setFromAngle(0);
         rot.setToAngle(90);
 
         rot.setOnFinished(e -> {
-            // 2. Swap Content
             showFront(word);
             if (onFlipFinished != null) onFlipFinished.run();
 
-            // 3. Rotate back to 0
             RotateTransition rotBack = new RotateTransition(Duration.millis(300), this);
             rotBack.setAxis(Rotate.Y_AXIS);
             rotBack.setFromAngle(90);
@@ -94,8 +88,10 @@ public class CardView extends StackPane {
     }
 
     private void showBack() {
-        backView.setVisible(true);
-        backPlaceholder.setVisible(backImg == null); // Show blue rect if image missing
+        // If image exists, show it. If not, show RED rectangle.
+        boolean hasBack = (backImg != null && !backImg.isError());
+        backView.setVisible(hasBack);
+        backPlaceholder.setVisible(!hasBack);
 
         frontView.setVisible(false);
         frontPlaceholder.setVisible(false);
@@ -103,11 +99,13 @@ public class CardView extends StackPane {
     }
 
     private void showFront(String word) {
+        // If image exists, show it. If not, show GREEN rectangle.
+        boolean hasFront = (frontImg != null && !frontImg.isError());
+        frontView.setVisible(hasFront);
+        frontPlaceholder.setVisible(!hasFront);
+
         backView.setVisible(false);
         backPlaceholder.setVisible(false);
-
-        frontView.setVisible(true);
-        frontPlaceholder.setVisible(frontImg == null); // Show white rect if image missing
 
         wordLabel.setText(word);
         wordLabel.setVisible(true);
