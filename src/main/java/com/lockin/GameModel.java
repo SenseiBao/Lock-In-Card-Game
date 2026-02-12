@@ -22,7 +22,12 @@ public class GameModel {
         try {
             var stream = getClass().getResourceAsStream("/words.txt");
             if (stream != null) {
-                new BufferedReader(new InputStreamReader(stream)).lines().forEach(deck::push);
+                new BufferedReader(new InputStreamReader(stream))
+                        .lines()
+                        .map(String::trim)        // Good practice: removes accidental spaces
+                        .filter(s -> !s.isEmpty()) // Good practice: ignores empty lines
+                        .distinct()               // Removes duplicates!
+                        .forEach(deck::push);
                 Collections.shuffle(deck);
             } else {
                 deck.push("NEBULA");
