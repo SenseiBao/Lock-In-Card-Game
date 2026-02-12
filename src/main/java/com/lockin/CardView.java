@@ -9,71 +9,74 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
+import java.io.InputStream;
 
 public class CardView extends StackPane {
 
-    private ImageView backView = new ImageView();
-    private ImageView frontView = new ImageView();
     private Label wordLabel = new Label();
 
-    // DEBUG MODE: Bright colors to see if images are missing
-    private Rectangle backPlaceholder = new Rectangle(350, 500, Color.RED);  // RED = Back Image Missing
-    private Rectangle frontPlaceholder = new Rectangle(350, 500, Color.GREEN); // GREEN = Front Image Missing
+    // VISUALS: Shapes (Backup) + Images (Primary)
+    private Rectangle backRect = new Rectangle(350, 500, Color.DARKBLUE);
+    private Rectangle frontRect = new Rectangle(350, 500, Color.GOLD);
+    private ImageView backView = new ImageView();
+    private ImageView frontView = new ImageView();
 
-    private Image backImg;
-    private Image frontImg;
+    private StackPane backLayer;
+    private StackPane frontLayer;
 
     public CardView() {
         this.setPrefSize(350, 500);
-        loadAssets();
+        this.setMinSize(350, 500); // Prevents collapse
 
+        loadImages();
+
+        // Setup Layers
+        backLayer = new StackPane(backRect, backView);
+        frontLayer = new StackPane(frontRect, frontView, wordLabel);
+        frontLayer.setVisible(false); // Start hidden
+
+        // Setup Word
         wordLabel.setStyle("-fx-font-size: 40px; -fx-font-weight: bold; -fx-text-fill: #1a1a2e;");
-        wordLabel.setVisible(false);
 
-        // Add layers
-        this.getChildren().addAll(backPlaceholder, frontPlaceholder, backView, frontView, wordLabel);
-
-        showBack();
+        this.getChildren().addAll(backLayer, frontLayer);
     }
 
-    private void loadAssets() {
-        System.out.println("--- LOADING ASSETS ---");
+    private void loadImages() {
         try {
-            // Debugging the paths
-            var backUrl = getClass().getResource("/images/card_back.jpg");
-            var frontUrl = getClass().getResource("/images/card_front.png");
-
-            System.out.println("Back URL: " + (backUrl != null ? "FOUND" : "MISSING"));
-            System.out.println("Front URL: " + (frontUrl != null ? "FOUND" : "MISSING"));
-
-            if (backUrl != null) {
-                backImg = new Image(backUrl.toExternalForm());
-                backView.setImage(backImg);
+            InputStream backStream = getClass().getResourceAsStream("/images/card_back.jpg");
+            if (backStream != null) {
+                backView.setImage(new Image(backStream));
                 backView.setFitWidth(350);
                 backView.setPreserveRatio(true);
             }
-            if (frontUrl != null) {
-                frontImg = new Image(frontUrl.toExternalForm());
-                frontView.setImage(frontImg);
+
+            InputStream frontStream = getClass().getResourceAsStream("/images/card_front.png");
+            if (frontStream != null) {
+                frontView.setImage(new Image(frontStream));
                 frontView.setFitWidth(350);
                 frontView.setPreserveRatio(true);
             }
         } catch (Exception e) {
-            System.err.println("CRASH LOADING IMAGES: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error loading images: " + e.getMessage());
         }
     }
 
     public void flipToWord(String word, Runnable onFlipFinished) {
+        // 1. Rotate 90 degrees
         RotateTransition rot = new RotateTransition(Duration.millis(300), this);
         rot.setAxis(Rotate.Y_AXIS);
         rot.setFromAngle(0);
         rot.setToAngle(90);
 
         rot.setOnFinished(e -> {
-            showFront(word);
+            // 2. Swap Content
+            backLayer.setVisible(false);
+            frontLayer.setVisible(true);
+            wordLabel.setText(word);
+
             if (onFlipFinished != null) onFlipFinished.run();
 
+            // 3. Rotate back to 0
             RotateTransition rotBack = new RotateTransition(Duration.millis(300), this);
             rotBack.setAxis(Rotate.Y_AXIS);
             rotBack.setFromAngle(90);
@@ -84,30 +87,8 @@ public class CardView extends StackPane {
     }
 
     public void resetToBack() {
-        showBack();
-    }
-
-    private void showBack() {
-        // If image exists, show it. If not, show RED rectangle.
-        boolean hasBack = (backImg != null && !backImg.isError());
-        backView.setVisible(hasBack);
-        backPlaceholder.setVisible(!hasBack);
-
-        frontView.setVisible(false);
-        frontPlaceholder.setVisible(false);
-        wordLabel.setVisible(false);
-    }
-
-    private void showFront(String word) {
-        // If image exists, show it. If not, show GREEN rectangle.
-        boolean hasFront = (frontImg != null && !frontImg.isError());
-        frontView.setVisible(hasFront);
-        frontPlaceholder.setVisible(!hasFront);
-
-        backView.setVisible(false);
-        backPlaceholder.setVisible(false);
-
-        wordLabel.setText(word);
-        wordLabel.setVisible(true);
+        backLayer.setVisible(true);
+        frontLayer.setVisible(false);
+        this.setRotate(0);
     }
 }

@@ -5,9 +5,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Stack;
 
 public class GameModel {
-    private List<String> deck = new ArrayList<>();
+    private Stack<String> deck = new Stack<>();
     private int teamAScore = 0;
     private int teamBScore = 0;
 
@@ -19,19 +20,21 @@ public class GameModel {
         try {
             var stream = getClass().getResourceAsStream("/words.txt");
             if (stream != null) {
-                new BufferedReader(new InputStreamReader(stream)).lines().forEach(deck::add);
+                new BufferedReader(new InputStreamReader(stream)).lines().forEach(deck::push);
                 Collections.shuffle(deck);
             } else {
-                deck.add("NO WORDS FOUND");
+                deck.push("NEBULA"); // Fallback
+                deck.push("CHRONOS");
+                deck.push("ALGORITHM");
             }
         } catch (Exception e) {
-            deck.add("ERROR LOADING");
+            System.err.println("Error loading words: " + e.getMessage());
         }
     }
 
     public String drawWord() {
         if (deck.isEmpty()) return "GAME OVER";
-        return deck.remove(0);
+        return deck.pop();
     }
 
     public void addScore(boolean isTeamA) {
@@ -40,7 +43,7 @@ public class GameModel {
     }
 
     public String getScoreString() {
-        return "Team A: " + teamAScore + "  |  Team B: " + teamBScore;
+        return "Team A: " + teamAScore + " | Team B: " + teamBScore;
     }
 
     public String rollDice() {
@@ -49,6 +52,13 @@ public class GameModel {
             return "⚠️ ROLL 6: " + getPowerUp();
         }
         return "STANDARD ROUND (Roll: " + roll + ")";
+    }
+
+    public void resetGame() {
+        deck.clear();
+        teamAScore = 0;
+        teamBScore = 0;
+        loadWords(); // Re-reads the file or fallback
     }
 
     private String getPowerUp() {
@@ -60,7 +70,7 @@ public class GameModel {
             case 4 -> "DATA CORRUPTION";
             case 5 -> "HIGH TRAFFIC";
             case 6 -> "LOOKAHEAD";
-            default -> "ERROR";
+            default -> "POWER UP";
         };
     }
 }
