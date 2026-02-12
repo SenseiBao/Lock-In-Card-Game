@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'application'
+    // CHANGE THIS LINE:
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+group 'com.lockin'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = "17" // Or your preferred version
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+application {
+    mainClass = 'com.lockin.LockInApp'
+}
+
+dependencies {
+    // We can add JSON libraries later if you want to swap words.txt for words.json
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+}
