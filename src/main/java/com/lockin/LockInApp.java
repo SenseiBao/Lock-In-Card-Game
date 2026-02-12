@@ -5,112 +5,86 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class LockInApp extends Application {
 
-    private List<String> deck = new ArrayList<>();
-    private int teamAScore = 0;
-    private int teamBScore = 0;
-
-    private Label wordLabel = new Label("LOCK-IN");
-    private Label scoreLabel = new Label("Team A: 0  |  Team B: 0");
-    private ImageView cardImageView = new ImageView();
-    private boolean isCardFlipped = false;
-
-    // Load images from resources
-    private Image backImage;
-    private Image frontFrame;
+    private GameModel gameModel = new GameModel();
+    private CardView cardView;
+    private Label scoreLabel = new Label();
+    private Label powerUpLabel = new Label("Roll the Die to Start");
 
     @Override
     public void start(Stage primaryStage) {
-        loadAssets();
+        cardView = new CardView();
 
-        // Main Container
+        // --- UI Setup ---
         VBox root = new VBox(25);
         root.setAlignment(Pos.CENTER);
-        root.setStyle("-fx-background-color: #0f0f1b;"); // Dark theme
+        // Force a color so we know if the UI is rendering
+        root.setStyle("-fx-background-color: #0f0f1b;");
 
-        // Scoreboard
+        scoreLabel.setText(gameModel.getScoreString());
         scoreLabel.setStyle("-fx-text-fill: white; -fx-font-size: 24px; -fx-font-family: 'Arial';");
 
-        // The Card Display Area
-        StackPane cardContainer = new StackPane();
-        cardContainer.setPrefSize(350, 500);
+        powerUpLabel.setStyle("-fx-text-fill: #d4af37; -fx-font-size: 18px; -fx-font-style: italic;");
 
-        // Initial state: Show the back
-        cardImageView.setImage(backImage);
-        cardImageView.setFitWidth(350);
-        cardImageView.setPreserveRatio(true);
-
-        // Word Label (Hidden by default or behind the back)
-        wordLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #1a1a2e;");
-        wordLabel.setVisible(false);
-
-        cardContainer.getChildren().addAll(cardImageView, wordLabel);
-
-        // Buttons
-        HBox scoreButtons = new HBox(20);
-        scoreButtons.setAlignment(Pos.CENTER);
+        // --- Buttons ---
         Button btnA = new Button("Team A Point");
         Button btnB = new Button("Team B Point");
         Button btnDraw = new Button("Draw Card");
 
-        btnDraw.setOnAction(e -> drawCard());
-        btnA.setOnAction(e -> { teamAScore++; updateUI(); });
-        btnB.setOnAction(e -> { teamBScore++; updateUI(); });
+        styleButton(btnA, "#4ecca3");
+        styleButton(btnB, "#4ecca3");
+        styleButton(btnDraw, "#d4af37");
 
-        scoreButtons.getChildren().addAll(btnA, btnB);
-        root.getChildren().addAll(scoreLabel, cardContainer, btnDraw, scoreButtons);
+        // --- Event Wiring ---
+        btnDraw.setOnAction(e -> handleDraw());
+        btnA.setOnAction(e -> {
+            gameModel.addScore(true);
+            scoreLabel.setText(gameModel.getScoreString());
+            resetRound();
+        });
+        btnB.setOnAction(e -> {
+            gameModel.addScore(false);
+            scoreLabel.setText(gameModel.getScoreString());
+            resetRound();
+        });
 
-        Scene scene = new Scene(root, 800, 700);
+        HBox controls = new HBox(20, btnA, btnB);
+        controls.setAlignment(Pos.CENTER);
+
+        root.getChildren().addAll(scoreLabel, powerUpLabel, cardView, btnDraw, controls);
+
+        Scene scene = new Scene(root, 900, 800);
         primaryStage.setTitle("LOCK-IN Companion");
         primaryStage.show();
     }
 
-    private void loadAssets() {
-        try {
-            backImage = new Image(getClass().getResourceAsStream("/images/card_back.png"));
-            frontFrame = new Image(getClass().getResourceAsStream("/images/card_front.png"));
-
-            // Load words
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    getClass().getResourceAsStream("/words.txt")));
-            reader.lines().forEach(deck::add);
-            Collections.shuffle(deck);
-        } catch (Exception e) {
-            System.out.println("Error loading assets: " + e.getMessage());
-        }
+    private void handleDraw() {
+        // Trigger the flip animation on the View
+        cardView.flipToWord(gameModel.drawWord(), () -> {
+            // When flip is done (card is hidden), update the dice roll text
+            String diceResult = gameModel.rollDice();
+            powerUpLabel.setText(diceResult);
+            if (diceResult.contains("ROLL 6")) {
+                powerUpLabel.setStyle("-fx-text-fill: #ff5555; -fx-font-size: 18px; -fx-font-weight: bold;");
+            } else {
+                powerUpLabel.setStyle("-fx-text-fill: #4ecca3; -fx-font-size: 18px; -fx-font-style: italic;");
+            }
+        });
     }
 
-    private void drawCard() {
-        if (!deck.isEmpty()) {
-            String word = deck.remove(0);
-            wordLabel.setText(word);
-
-            // Toggle to Front
-            cardImageView.setImage(frontFrame);
-            wordLabel.setVisible(true);
-            isCardFlipped = true;
-        } else {
-            wordLabel.setText("OUT OF CARDS");
-        }
+    private void resetRound() {
+        cardView.resetToBack();
+        powerUpLabel.setText("Roll the Die to Start");
+        powerUpLabel.setStyle("-fx-text-fill: #d4af37; -fx-font-size: 18px; -fx-font-style: italic;");
     }
 
-    private void updateUI() {
-        scoreLabel.setText("Team A: " + teamAScore + "  |  Team B: " + teamBScore);
-        // Reset card for next round
-        cardImageView.setImage(backImage);
-        wordLabel.setVisible(false);
+    private void styleButton(Button b, String color) {
+        b.setStyle("-fx-background-color: " + color + "; -fx-text-fill: #0f0f1b; -fx-font-weight: bold; -fx-padding: 10 20;");
     }
 
     public static void main(String[] args) {
