@@ -1,5 +1,5 @@
 Work in progress.
-# 🔒 Lock-In (Web Version)
+# 🔒 Lock-In (App Version)
 
 A digital implementation of the stack-based card game **Lock-In**, built with React, Vite, and Tailwind CSS.
 
