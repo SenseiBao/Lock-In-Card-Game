@@ -1,28 +1,40 @@
 plugins {
     id 'java'
     id 'application'
-    // CHANGE THIS LINE:
     id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 group 'com.lockin'
-version '1.0-SNAPSHOT'
+version '1.0'
 
 repositories {
     mavenCentral()
 }
 
 javafx {
-    version = "17" // or your specific version
-    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.media' ] // Added media here
+    version = "17"
+    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.media' ]
 }
 
 application {
-    mainClass = 'com.lockin.LockInApp'
+    // Point to the Launcher class created in the previous step
+    mainClass = 'com.lockin.Launcher'
+}
+
+// MANUAL FAT JAR TASK (Gradle 9 Compatible)
+tasks.register('fatJar', Jar) {
+    archiveFileName = 'LockInGame-all.jar'
+    manifest {
+        attributes 'Main-Class': 'com.lockin.Launcher'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 dependencies {
-    // We can add JSON libraries later if you want to swap words.txt for words.json
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
