@@ -8,8 +8,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.*;
+import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+
+import java.net.URL;
+import java.util.Random;
 
 public class LockInApp extends Application {
 
@@ -18,47 +22,44 @@ public class LockInApp extends Application {
     private Label scoreLabel = new Label();
     private Label powerUpLabel = new Label("Roll the Die to Start");
 
-    // NEW: Lists to display won words
     private ListView<String> listA = new ListView<>();
     private ListView<String> listB = new ListView<>();
 
-    // Track current word so we know what to add to the list
     private String currentWord = null;
+    private Random random = new Random();
+
+    // --- SOUND ARRAYS ---
+    private AudioClip[] drawSounds = new AudioClip[2];
+    private AudioClip[] pointSounds = new AudioClip[4];
 
     @Override
     public void start(Stage primaryStage) {
         cardView = new CardView();
+        loadSounds();
 
-        // --- ROOT LAYOUT (BorderPane is better for Side Panels) ---
         BorderPane root = new BorderPane();
         root.setBackground(new Background(new BackgroundFill(Color.rgb(15, 15, 27), null, null)));
         root.setPadding(new Insets(20));
 
-        // --- TOP SECTION (Scores & Status) ---
+        // --- TOP SECTION ---
         VBox topBox = new VBox(10);
         topBox.setAlignment(Pos.CENTER);
-
         scoreLabel.setText(gameModel.getScoreString());
         scoreLabel.setStyle("-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;");
-
         powerUpLabel.setStyle("-fx-text-fill: #d4af37; -fx-font-size: 18px; -fx-font-style: italic;");
-
         topBox.getChildren().addAll(scoreLabel, powerUpLabel);
         root.setTop(topBox);
 
-        // --- CENTER SECTION (The Card) ---
+        // --- CENTER SECTION ---
         StackPane centerContainer = new StackPane(cardView);
-        centerContainer.setPadding(new Insets(20)); // Breathing room
+        centerContainer.setPadding(new Insets(20));
         root.setCenter(centerContainer);
 
         // --- SIDE LISTS ---
-        VBox leftBox = createTeamBox("TEAM A", listA, "#4ecca3");
-        VBox rightBox = createTeamBox("TEAM B", listB, "#4ecca3"); // Or maybe specific team colors?
+        root.setLeft(createTeamBox("TEAM A", listA, "#4ecca3"));
+        root.setRight(createTeamBox("TEAM B", listB, "#4ecca3"));
 
-        root.setLeft(leftBox);
-        root.setRight(rightBox);
-
-        // --- BOTTOM SECTION (Controls) ---
+        // --- BOTTOM SECTION ---
         HBox controls = new HBox(20);
         controls.setAlignment(Pos.CENTER);
         controls.setPadding(new Insets(20, 0, 0, 0));
@@ -77,12 +78,9 @@ public class LockInApp extends Application {
         btnDraw.setStyle(drawStyle);
         btnReset.setStyle(resetStyle);
 
-        // --- EVENT WIRING ---
         btnDraw.setOnAction(e -> handleDraw());
-
         btnA.setOnAction(e -> handleWin(true));
         btnB.setOnAction(e -> handleWin(false));
-
         btnReset.setOnAction(e -> {
             gameModel.resetGame();
             updateUI();
@@ -92,33 +90,43 @@ public class LockInApp extends Application {
         controls.getChildren().addAll(btnA, btnB, btnDraw, btnReset);
         root.setBottom(controls);
 
-        Scene scene = new Scene(root, 1100, 850); // Made wider to fit lists
+        Scene scene = new Scene(root, 1100, 850);
         primaryStage.setTitle("LOCK-IN Companion");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
-    private VBox createTeamBox(String title, ListView<String> list, String color) {
-        VBox box = new VBox(10);
-        box.setPrefWidth(200);
-        box.setAlignment(Pos.TOP_CENTER);
+    private void loadSounds() {
+        try {
+            // Load Draw Sounds (50/50 chance later)
+            drawSounds[0] = loadAudio("/sounds/draw.wav");
+            drawSounds[1] = loadAudio("/sounds/draw2.wav");
 
-        Label lbl = new Label(title);
-        lbl.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold; -fx-font-size: 18px;");
+            // Load Point Sounds (80% for index 0, 20% shared for 1-3)
+            pointSounds[0] = loadAudio("/sounds/point.mp3");
+            pointSounds[1] = loadAudio("/sounds/point2.mp3");
+            pointSounds[2] = loadAudio("/sounds/point3.mp3"); // Using the extension as specified
+            pointSounds[3] = loadAudio("/sounds/point4.mp3");
 
-        list.setStyle("-fx-control-inner-background: #1a1a2e; -fx-background-color: #1a1a2e; -fx-text-fill: white;");
-        VBox.setVgrow(list, Priority.ALWAYS); // Fill height
+        } catch (Exception e) {
+            System.err.println("Error loading sound effects: " + e.getMessage());
+        }
+    }
 
-        box.getChildren().addAll(lbl, list);
-        return box;
+    private AudioClip loadAudio(String path) {
+        URL url = getClass().getResource(path);
+        return (url != null) ? new AudioClip(url.toExternalForm()) : null;
     }
 
     private void handleDraw() {
-        currentWord = gameModel.drawWord(); // Capture the word!
+        // Play random draw sound (50/50)
+        AudioClip sfx = drawSounds[random.nextInt(2)];
+        if (sfx != null) sfx.play();
+
+        currentWord = gameModel.drawWord();
         cardView.flipToWord(currentWord, () -> {
             String diceResult = gameModel.rollDice();
             powerUpLabel.setText(diceResult);
-
             if (diceResult.contains("ROLL 6")) {
                 powerUpLabel.setStyle("-fx-text-fill: #ff5555; -fx-font-size: 18px; -fx-font-weight: bold;");
             } else {
@@ -129,26 +137,47 @@ public class LockInApp extends Application {
 
     private void handleWin(boolean isTeamA) {
         if (currentWord != null && !currentWord.equals("GAME OVER")) {
+
+            // --- POINT SFX LOGIC ---
+            double chance = random.nextDouble();
+            if (chance < 0.8) {
+                // 80% chance for point.mp3
+                if (pointSounds[0] != null) pointSounds[0].play();
+            } else {
+                // 20% chance for one of the others (point2, point3, point4)
+                int extraIndex = 1 + random.nextInt(3); // Picks index 1, 2, or 3
+                if (pointSounds[extraIndex] != null) pointSounds[extraIndex].play();
+            }
+
             gameModel.recordWin(isTeamA, currentWord);
             updateUI();
             resetRound();
         }
     }
 
+    private VBox createTeamBox(String title, ListView<String> list, String color) {
+        VBox box = new VBox(10);
+        box.setPrefWidth(200);
+        box.setAlignment(Pos.TOP_CENTER);
+        Label lbl = new Label(title);
+        lbl.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold; -fx-font-size: 18px;");
+        list.setStyle("-fx-control-inner-background: #1a1a2e; -fx-background-color: #1a1a2e; -fx-text-fill: white;");
+        VBox.setVgrow(list, Priority.ALWAYS);
+        box.getChildren().addAll(lbl, list);
+        return box;
+    }
+
     private void updateUI() {
         scoreLabel.setText(gameModel.getScoreString());
-
-        // Refresh lists
         listA.getItems().clear();
         listA.getItems().addAll(gameModel.getWords(true));
-
         listB.getItems().clear();
         listB.getItems().addAll(gameModel.getWords(false));
     }
 
     private void resetRound() {
         cardView.resetToBack();
-        currentWord = null; // Clear current word so you can't double score
+        currentWord = null;
         powerUpLabel.setText("Roll the Die to Start");
         powerUpLabel.setStyle("-fx-text-fill: #d4af37; -fx-font-size: 18px; -fx-font-style: italic;");
     }

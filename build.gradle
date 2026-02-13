@@ -13,8 +13,8 @@ repositories {
 }
 
 javafx {
-    version = "17" // Or your preferred version
-    modules = [ 'javafx.controls', 'javafx.fxml' ]
+    version = "17" // or your specific version
+    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.media' ] // Added media here
 }
 
 application {
